@@ -1,5 +1,14 @@
+const bcrypt = require("bcrypt");
+
 const User = require("../models/User");
 const OTP = require("../models/OTP");
+
+const jwt = require("jsonwebtoken");
+const otpGenerator = require("otp-generator");
+const mailSender = require("../utils/mailSender");
+const { passwordUpdated } = require("../mail/templates/passwordUpdate");
+const Profile = require("../models/Profile");
+require("dotenv").config();
 
 //sendOTP
 
@@ -49,7 +58,7 @@ exports.sendOTP = async (req, res) => {
     // create an entry for OTP
     const otpBody = await OTP.create(otpPayload);
 
-    console.log(otpBody);
+    console.log("Your otpBody is : ", otpBody);
 
     // return response successful
     res.status(200).json({
@@ -57,7 +66,13 @@ exports.sendOTP = async (req, res) => {
       message: "OTP sent Successfully",
       otp,
     });
-  } catch (error) {}
+  } catch (error) {
+    console.log("Your OTP error: ", error);
+    return res.status(500).json({
+      success: false,
+      message: "OTP couldn't sent",
+    });
+  }
 };
 
 // signUP
@@ -73,9 +88,10 @@ exports.signUP = async (req, res) => {
       password,
       confirmPassword,
       accountType,
-      contact,
+      otp,
     } = req.body;
 
+    console;
     // validate krlo
     if (
       !firstName ||
@@ -136,7 +152,8 @@ exports.signUP = async (req, res) => {
     }
 
     // Hash Password
-    const hashedPassword = await bcrypt.has(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = password;
 
     // entry create in DB
     const profileDetails = await Profile.create({
@@ -150,7 +167,7 @@ exports.signUP = async (req, res) => {
       firstName,
       lastName,
       email,
-      contactNumber,
+
       password: hashedPassword,
       accountType,
       additionalDetails: profileDetails._id,
@@ -163,7 +180,7 @@ exports.signUP = async (req, res) => {
       message: "User is registered Successfully",
     });
   } catch (error) {
-    console.log(error);
+    console.log("**** Your error to SignUP : ", error);
     return res.status(500).json({
       success: false,
       message: "User cannot be registered. Please try again",
@@ -177,7 +194,7 @@ exports.login = async (req, res) => {
   try {
     // get data from req body
     const { email, password } = req.body;
-    
+
     // validation data
     if (!email || !password) {
       return res.status(403).json({
@@ -196,7 +213,8 @@ exports.login = async (req, res) => {
     }
     // generate JWT, after password matching
 
-    if (await bcrypt.compare(password, user.password)) {
+    // await bcrypt.compare(password, user.password)
+    if (password == user.password) {
       const payload = {
         email: user.email,
         id: user._id,

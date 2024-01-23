@@ -62,6 +62,8 @@ exports.createSubSection = async (req, res) => {
   }
 };
 
-// TODO: update SubSection 
+// TODO: update SubSection
+exports.updateSubSection = async (req, res) => {};
 
 // TODO: delete SubSection
+exports.deleteSubSection = async (req, res) => {};
