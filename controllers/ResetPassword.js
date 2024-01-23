@@ -55,7 +55,7 @@ exports.resetPasswordToken = async (req, res) => {
     console.log(error);
     return res.status(500).json({
       success: false,
-      message: "Password Reset problem",
+      message: error.message,
     });
   }
 };
@@ -65,6 +65,9 @@ exports.resetPassword = async (req, res) => {
   try {
     // data fetch
     const { password, confirmPassword, token } = req.body;
+
+    // console.log("***user***", req.user);
+    // const userid = req.user.id;
     // validation
     if (password !== confirmPassword) {
       return res.json({
@@ -75,7 +78,8 @@ exports.resetPassword = async (req, res) => {
 
     // get userdetails from db using token
 
-    const userDetails = await user.findOne({ token: token });
+    // console.log("*** Your Id *** : ", id);
+    const userDetails = await User.findOne({ token: token });
 
     // if no entry - invalid token
     if (!userDetails) {
@@ -94,7 +98,8 @@ exports.resetPassword = async (req, res) => {
     }
 
     // hash pwd
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = password;
 
     // password update
 
@@ -113,7 +118,7 @@ exports.resetPassword = async (req, res) => {
     console.log("resetPassword Error: ", error);
 
     return res.status(500).json({
-      success: true,
+      success: false,
       message: "There was an issue with Reset Password",
     });
   }

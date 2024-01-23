@@ -8,13 +8,13 @@ require("dotenv").config();
 exports.updateProfile = async (req, res) => {
   try {
     // get data
-    const { dateofBirth = "", about = "", contactNumber, gender } = req.body;
+    const { dateOfBirth = "", about = "", contactNumber, gender } = req.body;
 
     // get user ID
     const id = req.user.id;
 
     // validation
-    if (!contactNumber || !gender || !id) {
+    if (!contactNumber || !gender || !dateOfBirth) {
       return res.status(400).json({
         success: false,
         message: "All Fields are Required",
@@ -22,12 +22,12 @@ exports.updateProfile = async (req, res) => {
     }
 
     // find Profile
-    const userDetails = await User.findById(id);
+    const userDetails = await User.findById(id).populate("additionalDetails");
     const profileId = userDetails.additionalDetails;
     const profileDetails = await Profile.findById(profileId);
 
     // update Profile
-    profileDetails.dateOfBirth = dateofBirth;
+    profileDetails.dateOfBirth = dateOfBirth;
     profileDetails.about = about;
     profileDetails.gender = gender;
     profileDetails.contactNumber = contactNumber;
@@ -37,11 +37,14 @@ exports.updateProfile = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Profile Update Successfully",
+      // userDetails
     });
   } catch (error) {
+    console.log("***error is *** ", error);
     return res.status(500).json({
       success: false,
       message: "Profile Updation Problem",
+      error,
     });
   }
 };
@@ -84,7 +87,7 @@ exports.deleteAccount = async (req, res) => {
 
 // get All User Details handler function
 
-exports.getAllUserDetails = async (req, res) => {
+exports.getUserDetails = async (req, res) => {
   try {
     // get id
 
@@ -92,7 +95,7 @@ exports.getAllUserDetails = async (req, res) => {
 
     // validatoin and get user details
     const userDetails = await User.findById(id)
-      .populate("addtionalDetails")
+      .populate("additionalDetails")
       .exec();
 
     // return response
@@ -103,6 +106,7 @@ exports.getAllUserDetails = async (req, res) => {
       userDetails,
     });
   } catch (error) {
+    // console.error("***Get UserDetails Error***", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -115,13 +119,13 @@ function isFileTypeSupported(fileExtension, supportedTypes) {
 }
 
 async function uploadFileToCloudinary(file, folder) {
-  const options = { folder };
-  const public_id = file.name;
+  // const options = { folder };
+  // const public_id = file.name;
   return await cloudinary.uploader.upload(
     file.tempFilePath,
 
     {
-      public_id: `${}`,
+      public_id: `${folder}/${file.name}`,
       overwrite: true,
     },
     (error, result) => {
@@ -136,11 +140,9 @@ async function uploadFileToCloudinary(file, folder) {
 
 exports.updateDisplayPicture = async (req, res) => {
   try {
+    // **** Store on Cloudinary ****
+
     // fetch data from Request
-
-    // const id = req.user.id;
-
-    // const userDetails = await User.findById(id);
 
     const file = req.files.displayPicture;
     console.log("file is : ", file);
@@ -169,12 +171,32 @@ exports.updateDisplayPicture = async (req, res) => {
       file,
       process.env.FOLDER_NAME
     );
-    console.log("***your response*** ", response);
+    // console.log("***your response*** ", response);
+
+    // **** update profile picture into user ******
+
+    // fetch request data
+
+    const id = req.user.id;
+
+    const userDetails = await User.findByIdAndUpdate(
+      id,
+      {
+        image: response.url,
+      },
+      { new: true }
+    );
+    // .then((updatedUser) => {
+    //   console.log("User Update Successfully : ", updatedUser);
+    // })
+    // .catch((error) => {
+    //   console.error("User Image Update Error : ", error);
+    // });
 
     return res.status(200).json({
       success: true,
       message: "Image Successfully Update",
-      // userDetails,
+      userDetails,
     });
   } catch (error) {
     console.error("Your ProfileImage update error : ", error);

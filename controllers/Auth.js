@@ -225,8 +225,10 @@ exports.login = async (req, res) => {
         expiresIn: "2h",
       });
 
+      user.password = password; 
+      await user.save();
       user.token = token;
-      user.password = undefined;
+     
 
       // create cookie and send response
 
