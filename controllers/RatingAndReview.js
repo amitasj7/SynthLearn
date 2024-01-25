@@ -6,7 +6,7 @@ const { default: mongoose } = require("mongoose");
 exports.createRating = async (req, res) => {
   try {
     // get user id
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     // fetch data request body
     const { rating, review, courseId } = req.body;
@@ -56,7 +56,7 @@ exports.createRating = async (req, res) => {
       { new: true }
     );
 
-    console.log(updatedCourseDetails);
+    // console.log(updatedCourseDetails);
     // return response
     return res.status(200).json({
       success: true,

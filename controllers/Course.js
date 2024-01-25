@@ -2,14 +2,21 @@ const Category = require("../models/Category");
 const Course = require("../models/Course");
 const User = require("../models/User");
 const { uploadImageToCloudinary } = require("../utils/imageUploader");
+const mongoose = require("mongoose");
 
 // create Course Handler function
 exports.createCourse = async (req, res) => {
   try {
     // fetch data
 
-    const { courseName, courseDescription, whatYouWillLearn, price, tag } =
-      req.body;
+    const {
+      courseName,
+      courseDescription,
+      whatYouWillLearn,
+      price,
+      category,
+      tag,
+    } = req.body;
 
     // get thumbnail
     const thumbnail = req.files.thumbnailImage;
@@ -21,6 +28,7 @@ exports.createCourse = async (req, res) => {
       !whatYouWillLearn ||
       !price ||
       !tag ||
+      !category ||
       !thumbnail
     ) {
       return res
@@ -28,11 +36,32 @@ exports.createCourse = async (req, res) => {
         .json({ message: "Please provide all the required Fields" });
     }
 
+    // convert String to ObjectId
+    const categoryObjectId = new mongoose.Types.ObjectId(category);
+
+    // check courseCategory is available or not
+    const categoryCheck = await Category.findById(categoryObjectId);
+
+    if (!categoryCheck) {
+      return res.status(404).json({
+        success: false,
+        message: "CourseCategory not found, select another course to create",
+      });
+    }
+
+    // update Category ka Schema
+    const deletedCategory = await Category.findByIdAndDelete(
+      {
+        _id: categoryObjectId,
+      },
+      { new: true }
+    );
+
     // check the Instructor
     const userId = req.user.id;
     const instructorDetails = await User.findById(userId);
 
-    // TODO: userId and instructorId same or not ?
+    // TODO: userId and instructorId same or not  = yes, it should be same
 
     console.log("Instructor Details: ", instructorDetails);
 
@@ -50,14 +79,15 @@ exports.createCourse = async (req, res) => {
       process.env.FOLDER_NAME
     );
 
-    // create an entry for new course
+    // create an entry in DATABASE for new course
     const newCourse = await Course.create({
       courseName,
       courseDescription,
       instructor: instructorDetails._id,
       whatYouWillLearn: whatYouWillLearn,
       price,
-      tag: tagDetails._id,
+      category: categoryObjectId,
+      tag: tag,
       thumbnail: thumbnailImage.secure_url,
     });
 
@@ -71,17 +101,16 @@ exports.createCourse = async (req, res) => {
       { new: true }
     );
 
-    // update Tag ka Schema
-    // TODO: HW
-
     // return response
     return res.status(200).json({
       success: true,
       message: "Course Created Successfully",
       data: newCourse,
+
+      deletedCategory,
     });
   } catch (error) {
-    console.error(error);
+    // console.error(error);
     return res.status(500).json({
       success: false,
       message: "Failed to create Course",
@@ -95,19 +124,15 @@ exports.createCourse = async (req, res) => {
 exports.getAllCourses = async (req, res) => {
   // TODO: change the below statement incrementally
   try {
-    const allCourses = await Course.find(
-      {},
-      {
-        courseName: true,
-        price: true,
-        thumbnail: true,
-        instructor: true,
-        ratingAndReviews: true,
-        studentEnrolled: true,
-      }
-    )
-      .populate("instructor")
-      .exec();
+    const allCourses = await Course.find({}, {}).populate({
+      path: "instructor",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Your all Courses",
+      allCourses,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -134,9 +159,9 @@ exports.getCourseDetails = async (req, res) => {
         },
       })
       .populate("category")
-      // .populate("ratingAndreviews")
+      .populate("ratingAndReviews")
       .populate({
-        path: "courseContent",
+        path: "coursContent",
         populate: {
           path: "subSection",
         },
